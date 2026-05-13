@@ -1,0 +1,62 @@
+{
+  "name": "cardio-cat",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "test:unit": "vitest",
+    "test:e2e": "playwright test",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/manrope": "^5.2.8",
+    "@tailwindcss/vite": "^4.3.0",
+    "echarts": "^6.0.0",
+    "idb": "^8.0.3",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.34",
+    "vue-echarts": "^8.0.1",
+    "vue-i18n": "^11.4.2",
+    "vue-router": "^5.0.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@tsconfig/node22": "^22.0.5",
+    "@types/jsdom": "^28.0.2",
+    "@types/node": "^25.7.0",
+    "@types/web-bluetooth": "^0.0.21",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vitest/eslint-plugin": "^1.6.17",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.7.0",
+    "@vue/test-utils": "^2.4.10",
+    "@vue/tsconfig": "^0.9.1",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-playwright": "^2.10.2",
+    "eslint-plugin-vue": "~10.9.1",
+    "jiti": "^2.7.0",
+    "jsdom": "^29.1.1",
+    "npm-run-all2": "^8.0.4",
+    "postcss": "^8.5.14",
+    "prettier": "3.8.3",
+    "tailwindcss": "^4.3.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.12",
+    "vite-plugin-vue-devtools": "^8.1.2",
+    "vitest": "^4.1.6",
+    "vue-tsc": "^3.2.8"
+  }
+}
