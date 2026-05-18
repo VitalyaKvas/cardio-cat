@@ -102,6 +102,20 @@ export function useParticipantBle() {
   }
 
   function bindStopper(pid: string, did: string, stopper: HeartRateConnection) {
+    // Stop the previous stopper for the same (pid, did) before overwriting.
+    // Otherwise its gattserverdisconnected listener stays attached to the
+    // device and any future disconnect fires N parallel reconnect chains.
+    const prev = maps.bleStop[pid]?.[did]
+    if (prev && prev !== stopper) {
+      try {
+        prev.stop()
+      } catch (err) {
+        bleError('participant.bindStopper.prevStop.failed', err, {
+          participantId: pid,
+          deviceId: did,
+        })
+      }
+    }
     ensure(maps.bleStop, pid)[did] = stopper
     ensure(maps.failed, pid)[did] = false
     ensure(maps.retryAttempts, pid)[did] = 0
@@ -122,64 +136,89 @@ export function useParticipantBle() {
       bleLog('autoreconnect.aborted.entry', { participantId: pid, deviceId: did })
       return
     }
+    if (maps.reconnecting[pid]?.[did]) {
+      // A retry chain is already running. Stale listeners from a previous
+      // session can fire duplicate disconnect events — ignore them so the
+      // backoff and exhaustion toast stay single-shot.
+      bleLog('autoreconnect.skip.alreadyInFlight', { participantId: pid, deviceId: did })
+      return
+    }
     if (!isGetDevicesSupported()) {
       ensure(maps.failed, pid)[did] = true
       bleWarn('autoreconnect.skip.noGetDevices', { participantId: pid, deviceId: did })
       ui.pushToast('warn', tr('ble.connectionLost'))
       return
     }
-    const attempt = (maps.retryAttempts[pid]?.[did] ?? 0) + 1
-    ensure(maps.retryAttempts, pid)[did] = attempt
-    bleLog('autoreconnect.attempt.start', { participantId: pid, deviceId: did, attempt })
-    if (attempt > MAX_AUTO_RETRY) {
-      ensure(maps.failed, pid)[did] = true
-      bleWarn('autoreconnect.exhausted', { participantId: pid, deviceId: did, attempt })
-      ui.pushToast('warn', tr('ble.exhausted', { id: did.slice(0, 6), max: MAX_AUTO_RETRY }))
-      return
-    }
-    await new Promise((r) => setTimeout(r, RECONNECT_BACKOFF_MS * attempt))
-    if (isAborted(pid, did)) {
-      bleLog('autoreconnect.aborted.afterBackoff', { participantId: pid, deviceId: did, attempt })
-      return
-    }
+
+    ensure(maps.reconnecting, pid)[did] = true
     try {
-      const allowed = await getAllowedHeartRateDevices().catch((err) => {
-        bleError('autoreconnect.getAllowedHeartRateDevices.failed', err, {
-          participantId: pid,
-          deviceId: did,
-        })
-        return [] as BluetoothDevice[]
-      })
-      if (isAborted(pid, did)) {
-        bleLog('autoreconnect.aborted.afterAllowed', { participantId: pid, deviceId: did, attempt })
-        return
+      for (let attempt = 1; attempt <= MAX_AUTO_RETRY; attempt++) {
+        if (isAborted(pid, did)) return
+        ensure(maps.retryAttempts, pid)[did] = attempt
+        bleLog('autoreconnect.attempt.start', { participantId: pid, deviceId: did, attempt })
+
+        await new Promise((r) => setTimeout(r, RECONNECT_BACKOFF_MS * attempt))
+        if (isAborted(pid, did)) {
+          bleLog('autoreconnect.aborted.afterBackoff', {
+            participantId: pid,
+            deviceId: did,
+            attempt,
+          })
+          return
+        }
+
+        try {
+          const allowed = await getAllowedHeartRateDevices().catch((err) => {
+            bleError('autoreconnect.getAllowedHeartRateDevices.failed', err, {
+              participantId: pid,
+              deviceId: did,
+            })
+            return [] as BluetoothDevice[]
+          })
+          if (isAborted(pid, did)) return
+          const device = allowed.find((x) => x.id === did)
+          if (!device) {
+            ensure(maps.failed, pid)[did] = true
+            bleWarn('autoreconnect.device.not.in.allowed.list', {
+              participantId: pid,
+              deviceId: did,
+              allowedCount: allowed.length,
+            })
+            ui.pushToast('warn', tr('ble.deviceUnavailable'))
+            return
+          }
+          const stopper = await connectAndListenHeartRate(device, (bpm) => markBpm(pid, did, bpm))
+          if (isAborted(pid, did)) {
+            bleLog('autoreconnect.aborted.afterConnect', {
+              participantId: pid,
+              deviceId: did,
+              attempt,
+            })
+            stopper.stop()
+            return
+          }
+          bindStopper(pid, did, stopper)
+          bleLog('autoreconnect.success', { participantId: pid, deviceId: did, attempt })
+          return
+        } catch (err) {
+          bleError('autoreconnect.attempt.failed', err, {
+            participantId: pid,
+            deviceId: did,
+            attempt,
+          })
+          // fall through to the next attempt with a longer backoff
+        }
       }
-      const device = allowed.find((x) => x.id === did)
-      if (!device) {
-        ensure(maps.failed, pid)[did] = true
-        bleWarn('autoreconnect.device.not.in.allowed.list', {
-          participantId: pid,
-          deviceId: did,
-          allowedCount: allowed.length,
-        })
-        ui.pushToast('warn', tr('ble.deviceUnavailable'))
-        return
-      }
-      const stopper = await connectAndListenHeartRate(device, (bpm) => markBpm(pid, did, bpm))
-      if (isAborted(pid, did)) {
-        bleLog('autoreconnect.aborted.afterConnect', { participantId: pid, deviceId: did, attempt })
-        stopper.stop()
-        return
-      }
-      bindStopper(pid, did, stopper)
-      bleLog('autoreconnect.success', { participantId: pid, deviceId: did, attempt })
-    } catch (err) {
-      bleError('autoreconnect.attempt.failed', err, {
+
+      ensure(maps.failed, pid)[did] = true
+      bleWarn('autoreconnect.exhausted', {
         participantId: pid,
         deviceId: did,
-        attempt,
+        attempt: MAX_AUTO_RETRY,
       })
-      if (!isAborted(pid, did)) void handleMidSessionDisconnect(pid, did)
+      ui.pushToast('warn', tr('ble.exhausted', { id: did.slice(0, 6), max: MAX_AUTO_RETRY }))
+    } finally {
+      if (maps.reconnecting[pid]) maps.reconnecting[pid][did] = false
     }
   }
 
@@ -234,6 +273,7 @@ export function useParticipantBle() {
     if (maps.lastSeenMs[participantId]) delete maps.lastSeenMs[participantId][deviceId]
     if (maps.failed[participantId]) delete maps.failed[participantId][deviceId]
     if (maps.retryAttempts[participantId]) delete maps.retryAttempts[participantId][deviceId]
+    if (maps.reconnecting[participantId]) delete maps.reconnecting[participantId][deviceId]
     store.removeBle(participantId, deviceId)
   }
 

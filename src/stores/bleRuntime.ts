@@ -18,6 +18,9 @@ export type BleMaps = {
   // flight — handleMidSessionDisconnect checks this before each step so the
   // user-initiated removal beats the still-sleeping backoff.
   aborted: Record<string, Record<string, boolean>>
+  // True while an auto-reconnect chain is running for (pid, did). Guards
+  // against duplicate gattserverdisconnected events spawning parallel chains.
+  reconnecting: Record<string, Record<string, boolean>>
 }
 
 export type BpmListener = (participantId: string, bpm: number) => void
@@ -31,6 +34,7 @@ export const useBleRuntimeStore = defineStore('bleRuntime', () => {
     failed: {},
     retryAttempts: {},
     aborted: {},
+    reconnecting: {},
   })
 
   // Re-evaluates stale checks every second without per-device timers.
