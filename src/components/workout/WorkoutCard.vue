@@ -4,8 +4,8 @@ import Icon from '@/components/ui/Icon.vue'
 import BeatingHeart from '@/components/workout/BeatingHeart.vue'
 import EcgChart from '@/components/workout/EcgChart.vue'
 import ZoneRibbon from '@/components/workout/ZoneRibbon.vue'
-import { useSettingsStore } from '@/stores/settings'
 import { ageFromYob, maxHr, zoneAt } from '@/lib/zones'
+import { useSettingsStore } from '@/stores/settings'
 import type { Participant } from '@/stores/workout'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -51,6 +51,11 @@ const age = computed(() => ageFromYob(props.p.yob))
 const maxHrLabel = computed(() => maxHr(props.p.yob, settings.state.maxHrFormula))
 const safeBpm = computed(() => props.bpm ?? 0)
 const zone = computed(() => zoneAt(safeBpm.value, props.p.yob, settings.state.maxHrFormula))
+
+const bpmColor = computed<string>(() => {
+  if (props.bpm == null || props.bpm <= 0) return 'var(--d-text-3)'
+  return zone.value.color
+})
 
 const cardStyle = computed(
   () =>
@@ -117,14 +122,11 @@ const cardStyle = computed(
         :intense="zone.z === 5"
         :size="layout === 'spotlight' ? 'lg' : 'md'"
       />
-      <div class="bpm-display">
-        <span
-          class="bpm-num t-mono"
-          :style="{ color: stale ? 'var(--d-text-3)' : 'var(--d-text)' }"
-        >
+      <div class="bpm-display" :style="{ color: bpmColor }">
+        <span class="bpm-num t-mono">
           {{ stale || bpm == null ? '—' : bpm }}
         </span>
-        <span class="bpm-unit">bpm</span>
+        <span class="bpm-unit" style="color: inherit">bpm</span>
       </div>
     </div>
 

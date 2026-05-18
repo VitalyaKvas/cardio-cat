@@ -71,29 +71,13 @@ export function zonesFor(
   return { age, maxHr: max, ranges }
 }
 
-export type RestZone = {
-  z: 0
-  name: 'rest'
-  color: string
-  cssVar: string
-}
-
-export type AnyZone = Zone | RestZone
-
-export const REST_ZONE: RestZone = {
-  z: 0,
-  name: 'rest',
-  color: '#a0a0a0',
-  cssVar: 'var(--c-text-4)',
-}
-
 export function zoneAt(
   bpm: number,
   yob: number | null | undefined,
   formula: MaxHrFormula = 'classic',
-): AnyZone {
+): Zone {
   const table = zonesFor(yob, formula)
-  if (bpm < table.ranges[0].from) return REST_ZONE
+  if (bpm < table.ranges[0].from) return table.ranges[0]
   for (const r of table.ranges) {
     if (bpm >= r.from && bpm <= r.to) return r
   }

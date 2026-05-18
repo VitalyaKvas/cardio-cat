@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ageFromYob, maxHr, pctOfMax, zoneAt, zonesFor, REST_ZONE } from '../zones'
+import { ageFromYob, maxHr, pctOfMax, zoneAt, zonesFor } from '../zones'
 
 const NOW_YEAR = 2026
 
@@ -45,14 +45,14 @@ describe('zonesFor', () => {
 })
 
 describe('zoneAt', () => {
-  it('returns REST_ZONE below the first zone', () => {
+  it('clamps to Z1 below the first zone', () => {
     const result = zoneAt(40, 1990, 'classic')
-    expect(result).toBe(REST_ZONE)
+    expect(result.z).toBe(1)
   })
 
   it('returns Z5 for very high BPM', () => {
     const result = zoneAt(220, 1990, 'classic')
-    expect('z' in result && result.z).toBe(5)
+    expect(result.z).toBe(5)
   })
 })
 
