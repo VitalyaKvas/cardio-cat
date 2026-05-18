@@ -168,7 +168,13 @@ function stats(pid: string): { avg: number; min: number | null; max: number | nu
     formula: settings.state.calorieFormula,
     maxHrFormula: settings.state.maxHrFormula,
   })
-  return { avg: s.avg, min: s.min, max: s.max, kcal: s.kcal }
+  const hasMeasured = s.sampleCount > 0
+  return {
+    avg: s.avg,
+    min: hasMeasured ? s.min : null,
+    max: hasMeasured ? s.max : null,
+    kcal: s.kcal,
+  }
 }
 
 function liveBpm(pid: string): number | null {
