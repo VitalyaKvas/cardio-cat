@@ -2,7 +2,7 @@
 import VChart from 'vue-echarts'
 import { useSettingsStore } from '@/stores/settings'
 import { hexToRgba } from '@/lib/color'
-import { isMeasured, SAMPLE_LIVE } from '@/lib/sampleStatus'
+import { isMeasured, SAMPLE_LIVE, SAMPLE_STALE_DARK } from '@/lib/sampleStatus'
 import { formatClockHm, formatClockTime, formatMmSs } from '@/lib/time'
 import { clampTooltipToViewport } from '@/lib/echartsTooltip'
 import { zoneAt, zonesFor } from '@/lib/zones'
@@ -39,8 +39,13 @@ const props = withDefaults(
 const settings = useSettingsStore()
 
 const STALE_COLOR = '#7c7466'
+const STALE_DARK_COLOR = '#1a1a1a'
 const TT_LABEL = '#a89b80'
 const TT_VAL = '#f6f1e8'
+
+function nonMeasuredColor(s: number | undefined): string {
+  return s === SAMPLE_STALE_DARK ? STALE_DARK_COLOR : STALE_COLOR
+}
 
 const host = ref<HTMLElement | null>(null)
 const positionTooltip = clampTooltipToViewport(host)
@@ -64,13 +69,16 @@ const option = computed(() => {
   const lastColor = last
     ? lastMeasured
       ? zoneAt(last[1], props.yob, settings.state.maxHrFormula).color
-      : STALE_COLOR
+      : nonMeasuredColor(lastStatus)
     : null
 
-  const grayPoints: Array<[number, number]> = []
+  const stalePoints: Array<[number, number]> = []
+  const staleDarkPoints: Array<[number, number]> = []
   if (hasStatus) {
     for (let i = 0; i < N; i++) {
-      if (!isMeasured(statuses[i])) grayPoints.push([oldestT + i, props.history[i]])
+      const st = statuses[i]
+      if (st === SAMPLE_STALE_DARK) staleDarkPoints.push([oldestT + i, props.history[i]])
+      else if (!isMeasured(st)) stalePoints.push([oldestT + i, props.history[i]])
     }
   }
 
@@ -138,8 +146,12 @@ const option = computed(() => {
         if (!main?.data) return ''
         const [tSec, bpm] = main.data
         const idx = Math.round(tSec - oldestT)
-        const measured = !hasStatus || isMeasured(statuses[idx])
+        const st = hasStatus ? statuses[idx] : SAMPLE_LIVE
+        const measured = !hasStatus || isMeasured(st)
         const k = kcal[idx]
+        // Tooltip background is dark, so we keep silent-source text in the
+        // legible gray even for the dark virtual tier — the black is reserved
+        // for the dot on the chart, not for body text.
         const sourceColor = measured ? props.color : STALE_COLOR
         const sourceLabel = measured ? t('chartTooltip.sourceLive') : t('chartTooltip.sourceSilent')
         const row = (label: string, value: string, valColor = TT_VAL) =>
@@ -197,13 +209,25 @@ const option = computed(() => {
       },
       {
         type: 'scatter',
-        name: 'silent',
-        data: grayPoints,
+        name: 'silent-light',
+        data: stalePoints,
         yAxisIndex: 0,
         symbol: 'circle',
         symbolSize: 5,
         z: 5,
         itemStyle: { color: STALE_COLOR, borderColor: STALE_COLOR },
+        tooltip: { show: false },
+        silent: true,
+      },
+      {
+        type: 'scatter',
+        name: 'silent-dark',
+        data: staleDarkPoints,
+        yAxisIndex: 0,
+        symbol: 'circle',
+        symbolSize: 5,
+        z: 5,
+        itemStyle: { color: STALE_DARK_COLOR, borderColor: STALE_DARK_COLOR },
         tooltip: { show: false },
         silent: true,
       },

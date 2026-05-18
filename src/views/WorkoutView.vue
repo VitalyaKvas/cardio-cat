@@ -9,7 +9,7 @@ import { useAudio } from '@/composables/useAudio'
 import { useIntervalFn } from '@/composables/useIntervalFn'
 import { useParticipantBle } from '@/composables/useParticipantBle'
 import { kcalRatePerMinute, SILENT_BPM_ASSUMED } from '@/lib/calories'
-import { isMeasured, SAMPLE_GAP, SAMPLE_LIVE, SAMPLE_STALE } from '@/lib/sampleStatus'
+import { isMeasured, SAMPLE_GAP, SAMPLE_LIVE, SAMPLE_STALE, SAMPLE_STALE_DARK } from '@/lib/sampleStatus'
 import { aggregateParticipantSeries } from '@/lib/stats'
 import { zoneAt } from '@/lib/zones'
 import { formatTimer } from '@/lib/time'
@@ -105,12 +105,14 @@ function detectAudioEvents() {
   }
 }
 
-// Per-participant sampler bookkeeping. Used to extend a missing reading with
-// up to VIRTUAL_MAX virtual points (= last known bpm, gray on chart) before
-// we give up and emit a real 0 (gap).
+// Per-participant sampler bookkeeping. When the sensor goes silent we hold
+// the last known bpm for up to VIRTUAL_DARK_MAX ticks total: the first
+// VIRTUAL_LIGHT_MAX render as gray (short hiccup) and the rest render as
+// dark (signal probably lost). After that we give up and emit a real 0 (gap).
 type SamplerEntry = { lastLiveBpm: number | null; virtualCount: number }
 const samplerState: Record<string, SamplerEntry> = {}
-const VIRTUAL_MAX = 4
+const VIRTUAL_LIGHT_MAX = 10
+const VIRTUAL_DARK_MAX = 20
 
 function getSamplerState(pid: string): SamplerEntry {
   if (!samplerState[pid]) samplerState[pid] = { lastLiveBpm: null, virtualCount: 0 }
@@ -144,13 +146,15 @@ function flushBleSamples() {
       continue
     }
 
-    if (state.lastLiveBpm != null && state.virtualCount < VIRTUAL_MAX) {
-      // Bridge a short silence with the previous reading so the cardiogram
-      // doesn't dive to zero on a one- or two-second BLE hiccup.
-      store.appendBpmSample(pid, state.lastLiveBpm, SAMPLE_STALE)
+    if (state.lastLiveBpm != null && state.virtualCount < VIRTUAL_DARK_MAX) {
+      // Bridge the silence with the previous reading so the cardiogram
+      // doesn't dive to zero. First VIRTUAL_LIGHT_MAX ticks render gray,
+      // the rest render darker to flag "this is dragging".
+      const status = state.virtualCount < VIRTUAL_LIGHT_MAX ? SAMPLE_STALE : SAMPLE_STALE_DARK
+      store.appendBpmSample(pid, state.lastLiveBpm, status)
       state.virtualCount++
     } else {
-      // VIRTUAL_MAX exhausted (or no signal ever) → fall back to a real 0.
+      // Virtual budget exhausted (or no signal ever) → fall back to a real 0.
       store.appendBpmSample(pid, 0, SAMPLE_GAP)
     }
   }
