@@ -5,7 +5,11 @@
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 
-export type StopHandle = { stop: () => void; onDisconnect?: (cb: () => void) => void }
+export type StopHandle = {
+  stop: () => void
+  onDisconnect?: (cb: () => void) => void
+  detach?: () => void
+}
 
 export type BleMaps = {
   liveBpm: Record<string, Record<string, number | null>>

@@ -110,7 +110,7 @@ export function useParticipantBle() {
     const prev = maps.bleStop[pid]?.[did]
     if (prev && prev !== stopper) {
       try {
-        prev.detach()
+        prev.detach?.()
       } catch (err) {
         bleError('participant.bindStopper.prevDetach.failed', err, {
           participantId: pid,

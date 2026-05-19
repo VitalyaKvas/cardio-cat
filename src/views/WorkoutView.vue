@@ -9,7 +9,13 @@ import { useAudio } from '@/composables/useAudio'
 import { useIntervalFn } from '@/composables/useIntervalFn'
 import { useParticipantBle } from '@/composables/useParticipantBle'
 import { kcalRatePerMinute, SILENT_BPM_ASSUMED } from '@/lib/calories'
-import { isMeasured, SAMPLE_GAP, SAMPLE_LIVE, SAMPLE_STALE, SAMPLE_STALE_DARK } from '@/lib/sampleStatus'
+import {
+  isMeasured,
+  SAMPLE_GAP,
+  SAMPLE_LIVE,
+  SAMPLE_STALE,
+  SAMPLE_STALE_DARK,
+} from '@/lib/sampleStatus'
 import { aggregateParticipantSeries } from '@/lib/stats'
 import { zoneAt } from '@/lib/zones'
 import { formatTimer } from '@/lib/time'
