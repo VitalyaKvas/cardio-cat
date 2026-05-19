@@ -42,7 +42,8 @@
     "settings": "Ayarlar",
     "themeLight": "Açıq temağa keç",
     "themeDark": "Qaranlıq temağa keç",
-    "trash": "Çöp"
+    "trash": "Çöp",
+    "github": "GitHub repository"
   },
   "welcome": {
     "title": "Cardio Cat",

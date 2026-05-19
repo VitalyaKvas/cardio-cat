@@ -42,7 +42,8 @@
     "settings": "Налаштування",
     "themeLight": "Перемкнути на світлу тему",
     "themeDark": "Перемкнути на темну тему",
-    "trash": "Кошик"
+    "trash": "Кошик",
+    "github": "GitHub репозиторій"
   },
   "welcome": {
     "title": "Cardio Cat",

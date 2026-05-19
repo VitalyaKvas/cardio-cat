@@ -42,7 +42,8 @@
     "settings": "Settings",
     "themeLight": "Switch to light theme",
     "themeDark": "Switch to dark theme",
-    "trash": "Trash"
+    "trash": "Trash",
+    "github": "GitHub repository"
   },
   "welcome": {
     "title": "Cardio Cat",

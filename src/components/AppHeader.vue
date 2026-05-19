@@ -66,6 +66,15 @@ const themeTitle = computed(() =>
         <Icon name="trash" :size="18" />
         <span v-if="trashCount > 0" class="badge">{{ trashCount }}</span>
       </button>
+      <a
+        class="icon-btn"
+        :title="t('header.github')"
+        href="https://github.com/VitalyaKvas/cardio-cat"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Icon name="github" :size="18" />
+      </a>
       <button class="icon-btn" :title="themeTitle" @click="toggleTheme">
         <Icon :name="themeIcon" :size="18" />
       </button>
