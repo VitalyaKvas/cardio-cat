@@ -3,6 +3,11 @@
 
 import { bleError, bleLog, bleTrace, bleWarn } from '@/lib/blelog'
 
+// Web Bluetooth has no built-in timeout for gatt.connect(). If the device is
+// paired but not currently advertising, the call can hang forever. Bound it
+// so callers can fall back (e.g. open the chooser) instead of waiting silently.
+const GATT_CONNECT_TIMEOUT_MS = 8000
+
 export type HeartRateStop = { stop: () => void }
 
 export function isWebBluetoothSupported(): boolean {
@@ -33,6 +38,11 @@ export function isGetDevicesSupported(): boolean {
 }
 
 export type HeartRateConnection = HeartRateStop & {
+  // Tear down listeners + notifications without calling gatt.disconnect().
+  // Use when a fresh stopper for the SAME BluetoothDevice replaces this one:
+  // disconnect() would kill the just-established session because both stoppers
+  // share device.gatt.
+  detach: () => void
   onDisconnect: (cb: () => void) => void
 }
 
@@ -50,11 +60,38 @@ export async function connectAndListenHeartRate(
     throw err
   }
 
+  // Reset any half-open GATT state held from a previous session. Without this,
+  // gatt.connect() can silently hang because the radio still considers the
+  // device "connected" from the browser's POV even though notifications stopped.
+  if (gatt.connected) {
+    bleWarn('connect.gatt.alreadyConnected.resetting', deviceMeta)
+    try {
+      gatt.disconnect()
+    } catch (err) {
+      bleError('connect.gatt.preDisconnect.failed', err, deviceMeta)
+    }
+  }
+
   let server: BluetoothRemoteGATTServer
   try {
-    server = await gatt.connect()
+    server = await Promise.race([
+      gatt.connect(),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`gatt.connect timed out after ${GATT_CONNECT_TIMEOUT_MS}ms`)),
+          GATT_CONNECT_TIMEOUT_MS,
+        ),
+      ),
+    ])
   } catch (err) {
     bleError('connect.gatt.connect.failed', err, deviceMeta)
+    // Make sure we don't leave a dangling in-flight connect hogging the radio
+    // if the timeout fired before the browser resolved.
+    try {
+      gatt.disconnect()
+    } catch {
+      /* ignore — best-effort cleanup after timeout */
+    }
     throw err
   }
 
@@ -141,30 +178,39 @@ export async function connectAndListenHeartRate(
 
   bleLog('connect.ready', deviceMeta)
 
+  let detached = false
+  const detach = () => {
+    if (detached) return
+    detached = true
+    externalDisconnectCb = null
+    try {
+      characteristic.removeEventListener('characteristicvaluechanged', handler)
+    } catch (err) {
+      bleError('detach.removeEventListener.failed', err, deviceMeta)
+    }
+    try {
+      void characteristic.stopNotifications()
+    } catch (err) {
+      bleError('detach.stopNotifications.failed', err, deviceMeta)
+    }
+    try {
+      device.removeEventListener('gattserverdisconnected', onDisconnected)
+    } catch (err) {
+      bleError('detach.removeDisconnectListener.failed', err, deviceMeta)
+    }
+  }
+
   return {
     stop() {
       bleLog('connection.stop.called', { ...deviceMeta, sampleCount, lastSampleAt })
-      try {
-        characteristic.removeEventListener('characteristicvaluechanged', handler)
-      } catch (err) {
-        bleError('stop.removeEventListener.failed', err, deviceMeta)
-      }
-      try {
-        void characteristic.stopNotifications()
-      } catch (err) {
-        bleError('stop.stopNotifications.failed', err, deviceMeta)
-      }
-      try {
-        device.removeEventListener('gattserverdisconnected', onDisconnected)
-      } catch (err) {
-        bleError('stop.removeDisconnectListener.failed', err, deviceMeta)
-      }
+      detach()
       try {
         server.disconnect()
       } catch (err) {
         bleError('stop.server.disconnect.failed', err, deviceMeta)
       }
     },
+    detach,
     onDisconnect(cb) {
       externalDisconnectCb = cb
     },

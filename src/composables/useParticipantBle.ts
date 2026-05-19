@@ -102,15 +102,17 @@ export function useParticipantBle() {
   }
 
   function bindStopper(pid: string, did: string, stopper: HeartRateConnection) {
-    // Stop the previous stopper for the same (pid, did) before overwriting.
-    // Otherwise its gattserverdisconnected listener stays attached to the
-    // device and any future disconnect fires N parallel reconnect chains.
+    // Detach the previous stopper's listeners/notifications before overwriting,
+    // so a stale gattserverdisconnected handler doesn't fire parallel reconnect
+    // chains. We must NOT call stop() here: prev.stop() would invoke
+    // server.disconnect() on the shared device.gatt and kill the freshly
+    // established session held by the new stopper.
     const prev = maps.bleStop[pid]?.[did]
     if (prev && prev !== stopper) {
       try {
-        prev.stop()
+        prev.detach()
       } catch (err) {
-        bleError('participant.bindStopper.prevStop.failed', err, {
+        bleError('participant.bindStopper.prevDetach.failed', err, {
           participantId: pid,
           deviceId: did,
         })
@@ -294,21 +296,34 @@ export function useParticipantBle() {
         const device = allowed.find((x) => x.id === deviceId)
         if (device) {
           bleLog('reconnectDevice.match.allowed', { participantId, deviceId })
-          const stopper = await connectAndListenHeartRate(device, (bpm) => {
-            markBpm(participantId, device.id, bpm)
+          try {
+            const stopper = await connectAndListenHeartRate(device, (bpm) => {
+              markBpm(participantId, device.id, bpm)
+            })
+            bindStopper(participantId, device.id, stopper)
+            ui.pushToast(
+              'success',
+              tr('ble.connectedToast', { name: device.name ?? tr('participant.deviceFallback') }),
+            )
+            return
+          } catch (err) {
+            // Cached BluetoothDevice from getDevices() exists, but gatt.connect()
+            // throws NetworkError ("no longer in range") when Chrome hasn't seen a
+            // fresh advertisement. Fall through to the chooser — picking the device
+            // in requestDevice() forces an active scan, after which connect works.
+            bleWarn('reconnectDevice.cached.connect.failed.fallback.chooser', {
+              participantId,
+              deviceId,
+              error: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+            })
+          }
+        } else {
+          bleWarn('reconnectDevice.no.allowed.match', {
+            participantId,
+            deviceId,
+            allowedCount: allowed.length,
           })
-          bindStopper(participantId, device.id, stopper)
-          ui.pushToast(
-            'success',
-            tr('ble.connectedToast', { name: device.name ?? tr('participant.deviceFallback') }),
-          )
-          return
         }
-        bleWarn('reconnectDevice.no.allowed.match', {
-          participantId,
-          deviceId,
-          allowedCount: allowed.length,
-        })
       }
       const picked = await requestHeartRateDevice()
       bleLog('reconnectDevice.chooser.picked', {
