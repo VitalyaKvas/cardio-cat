@@ -314,7 +314,12 @@
     "imported": "Дані імпортовано",
     "importError": "Помилка імпорту",
     "invalidFile": "Невалідний формат файлу",
-    "clearedAll": "Всі дані очищено"
+    "clearedAll": "Всі дані очищено",
+    "deleteSessionTitle": "Видалити тренування?",
+    "deleteSessionBody": "Це тренування та всі його дані пульсу буде остаточно видалено. Цю дію не можна скасувати.",
+    "deleteSessionConfirm": "Видалити",
+    "sessionDeleted": "Тренування видалено",
+    "sessionDeleteBlocked": "Завершіть поточне тренування, перш ніж видаляти його."
   },
   "heatmap": {
     "weekdays": "ПН,ВТ,СР,ЧТ,ПТ,СБ,НД",
@@ -342,7 +347,8 @@
     "participants": "Учасники",
     "avgHeart": "Avg ♥",
     "maxHeart": "Max ♥",
-    "sessionsLabel": "сесій"
+    "sessionsLabel": "сесій",
+    "deleteSession": "Видалити тренування"
   },
   "finishWorkoutT": {
     "savedToast": "Тренування завершено",

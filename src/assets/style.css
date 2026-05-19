@@ -1184,6 +1184,17 @@ html.dark .heatmap-cell-future .heatmap-cell-day {
 .session-row:hover {
   background: var(--c-warm);
 }
+.session-row-actions {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.session-list-compact .session-row {
+  grid-template-columns: 80px 1fr auto;
+}
 .session-date {
   text-align: center;
 }

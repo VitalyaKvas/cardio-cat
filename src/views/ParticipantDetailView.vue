@@ -107,6 +107,11 @@ function goSummary(id: string) {
   router.push({ name: 'workout-summary', params: { sessionId: id } })
 }
 
+function askDeleteSession(e: Event, id: string) {
+  e.stopPropagation()
+  ui.openModal({ kind: 'delete_session', id })
+}
+
 function addDevice() {
   if (participant.value) void ble.addBleDevice(participant.value.id)
 }
@@ -247,7 +252,7 @@ function unlinkDevice(deviceId: string, deviceName: string | null | undefined) {
             <div class="empty-glyph">🐾</div>
             <p class="t-caption">{{ t('detailView.noWorkoutsHint') }}</p>
           </div>
-          <div v-else class="session-list">
+          <div v-else class="session-list session-list-compact">
             <div v-for="s in aggregated" :key="s.id" class="session-row" @click="goSummary(s.id)">
               <div class="session-date">
                 <div class="t-mono" style="font-size: 18px; font-weight: 700">
@@ -264,7 +269,17 @@ function unlinkDevice(deviceId: string, deviceName: string | null | undefined) {
                 <KV :k="t('detailView.maxHeart')" :v="s.max" />
                 <KV :k="t('detailView.kcalLabel')" :v="`~${s.kcal}`" tone="tangerine" />
               </div>
-              <Icon name="chevron-right" :size="18" color="var(--c-text-4)" />
+              <div class="session-row-actions">
+                <button
+                  class="icon-btn-sm session-delete"
+                  :title="t('statsT.deleteSession')"
+                  :aria-label="t('statsT.deleteSession')"
+                  @click="askDeleteSession($event, s.id)"
+                >
+                  <Icon name="trash" :size="16" />
+                </button>
+                <Icon name="chevron-right" :size="18" color="var(--c-text-4)" />
+              </div>
             </div>
           </div>
         </div>

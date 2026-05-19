@@ -314,7 +314,12 @@
     "imported": "Data imported",
     "importError": "Import error",
     "invalidFile": "Invalid file format",
-    "clearedAll": "All data cleared"
+    "clearedAll": "All data cleared",
+    "deleteSessionTitle": "Delete workout?",
+    "deleteSessionBody": "This workout and all its heart-rate samples will be permanently removed. This cannot be undone.",
+    "deleteSessionConfirm": "Delete",
+    "sessionDeleted": "Workout deleted",
+    "sessionDeleteBlocked": "Finish the current workout before deleting it."
   },
   "heatmap": {
     "weekdays": "Mo,Tu,We,Th,Fr,Sa,Su",
@@ -342,7 +347,8 @@
     "participants": "Participants",
     "avgHeart": "Avg ♥",
     "maxHeart": "Max ♥",
-    "sessionsLabel": "sessions"
+    "sessionsLabel": "sessions",
+    "deleteSession": "Delete workout"
   },
   "finishWorkoutT": {
     "savedToast": "Workout finished",

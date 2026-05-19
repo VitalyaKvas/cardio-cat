@@ -9,6 +9,7 @@ export type ModalDescriptor =
   | { kind: 'edit_participant'; id: string }
   | { kind: 'hide_participant'; id: string }
   | { kind: 'delete_forever'; id: string }
+  | { kind: 'delete_session'; id: string }
   | { kind: 'finish_workout' }
   | { kind: 'add_to_workout' }
   | { kind: 'import_replace'; payload: string }

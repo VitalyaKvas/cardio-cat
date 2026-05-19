@@ -314,7 +314,12 @@
     "imported": "Malümat import etildi",
     "importError": "İmport hatası",
     "invalidFile": "Fayl formatı yañlış",
-    "clearedAll": "Episi malümat silindi"
+    "clearedAll": "Episi malümat silindi",
+    "deleteSessionTitle": "Meşqni silmekmi?",
+    "deleteSessionBody": "Bu meşq ve onuñ episi yürek vurışı malümatı daima silinir. Bu areketni keri çevirmek olamaz.",
+    "deleteSessionConfirm": "Sil",
+    "sessionDeleted": "Meşq silindi",
+    "sessionDeleteBlocked": "Onı silmezden evel cari meşqni tamamlañız."
   },
   "heatmap": {
     "weekdays": "Pz,Sa,Çr,Pe,Cu,Cs,Yk",
@@ -342,7 +347,8 @@
     "participants": "İştirakçiler",
     "avgHeart": "Ort. ♥",
     "maxHeart": "Maks ♥",
-    "sessionsLabel": "seans"
+    "sessionsLabel": "seans",
+    "deleteSession": "Meşqni sil"
   },
   "finishWorkoutT": {
     "savedToast": "Meşq tamamlandı",

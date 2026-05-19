@@ -60,6 +60,15 @@ function confirmClearAll() {
   ui.pushToast('error', t('modals.clearedAll'))
   ui.closeModal()
 }
+
+function confirmDeleteSession() {
+  const m = target.value
+  if (m?.kind !== 'delete_session') return
+  const ok = store.deleteSession(m.id)
+  if (ok) ui.pushToast('info', t('modals.sessionDeleted'))
+  else ui.pushToast('warn', t('modals.sessionDeleteBlocked'))
+  ui.closeModal()
+}
 </script>
 
 <template>
@@ -104,6 +113,15 @@ function confirmClearAll() {
       :confirm-label="t('modals.clearConfirm')"
       kind="danger"
       @confirm="confirmClearAll"
+      @close="ui.closeModal()"
+    />
+    <ConfirmModal
+      v-else-if="target.kind === 'delete_session'"
+      :title="t('modals.deleteSessionTitle')"
+      :body="t('modals.deleteSessionBody')"
+      :confirm-label="t('modals.deleteSessionConfirm')"
+      kind="danger"
+      @confirm="confirmDeleteSession"
       @close="ui.closeModal()"
     />
     <InfoModal

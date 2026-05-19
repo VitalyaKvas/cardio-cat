@@ -367,6 +367,22 @@ export const useWorkoutStore = defineStore('workout', () => {
     return id
   }
 
+  function deleteSession(id: string): boolean {
+    const s = sessions.value[id]
+    if (!s) return false
+    // Refuse to delete the live session: callers should finish/discard via
+    // finishSession() so timers, dirty buffers and currentSessionId stay
+    // consistent.
+    if (currentSessionId.value === id) return false
+    delete sessions.value[id]
+    if (dirtySessionId === id) {
+      dirtySessionId = null
+      dirtyParticipantIds.clear()
+    }
+    storage.deleteSession(id).catch(handlePersistError)
+    return true
+  }
+
   function exportJson(): ExportPayload {
     return {
       version: '1.0',
@@ -511,6 +527,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     addToActiveSession,
     appendBpmSample,
     finishSession,
+    deleteSession,
     exportJson,
     importJson,
     clearAll,

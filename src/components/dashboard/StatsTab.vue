@@ -8,6 +8,7 @@ import { isMeasured } from '@/lib/sampleStatus'
 import { aggregateParticipantSeries } from '@/lib/stats'
 import { formatDayShort, formatMinutes } from '@/lib/time'
 import { useSettingsStore } from '@/stores/settings'
+import { useUiStore } from '@/stores/ui'
 import { useWorkoutStore } from '@/stores/workout'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -15,6 +16,7 @@ import { useRouter } from 'vue-router'
 
 const store = useWorkoutStore()
 const settings = useSettingsStore()
+const ui = useUiStore()
 const router = useRouter()
 const { t } = useI18n()
 
@@ -69,9 +71,9 @@ const top3 = computed(() => {
   return ranked.slice(0, 3)
 })
 
-const last5 = computed(() => store.orderedSessions.slice(0, 5))
+const allSessions = computed(() => store.orderedSessions)
 
-function sessionParticipantStack(s: (typeof last5.value)[number]) {
+function sessionParticipantStack(s: (typeof allSessions.value)[number]) {
   const visible = s.participantIds
     .slice(0, 3)
     .map((pid) => store.participants.find((p) => p.id === pid))
@@ -80,7 +82,7 @@ function sessionParticipantStack(s: (typeof last5.value)[number]) {
   return { visible, overflow }
 }
 
-function sessionStats(s: (typeof last5.value)[number]) {
+function sessionStats(s: (typeof allSessions.value)[number]) {
   const durationSec = s.endedAt ? Math.round((s.endedAt - s.startedAt) / 1000) : 0
   let bpmSum = 0
   let bpmCount = 0
@@ -134,6 +136,11 @@ const totalDuration = computed(() => {
 
 function goSummary(id: string) {
   router.push({ name: 'workout-summary', params: { sessionId: id } })
+}
+
+function askDeleteSession(e: Event, id: string) {
+  e.stopPropagation()
+  ui.openModal({ kind: 'delete_session', id })
 }
 </script>
 
@@ -206,14 +213,14 @@ function goSummary(id: string) {
         </div>
       </div>
 
-      <div v-if="last5.length === 0" class="empty">
+      <div v-if="allSessions.length === 0" class="empty">
         <div class="empty-glyph">📈</div>
         <h3 class="t-h3">{{ t('statsT.noWorkouts') }}</h3>
         <p class="t-caption">{{ t('statsT.noWorkoutsHint') }}</p>
       </div>
 
       <div v-else class="session-list">
-        <div v-for="s in last5" :key="s.id" class="session-row" @click="goSummary(s.id)">
+        <div v-for="s in allSessions" :key="s.id" class="session-row" @click="goSummary(s.id)">
           <div class="session-date">
             <div class="t-mono text-lg font-bold">
               {{ formatDayShort(s.startedAt).split(' ')[0] }}
@@ -257,7 +264,17 @@ function goSummary(id: string) {
             <KV :k="t('statsT.maxHeart')" :v="sessionStats(s).maxBpm || '—'" />
             <KV :k="t('statsT.kcal')" :v="`~${sessionStats(s).kcal}`" tone="tangerine" />
           </div>
-          <Icon name="chevron-right" :size="18" color="var(--c-text-4)" />
+          <div class="session-row-actions">
+            <button
+              class="icon-btn-sm session-delete"
+              :title="t('statsT.deleteSession')"
+              :aria-label="t('statsT.deleteSession')"
+              @click="askDeleteSession($event, s.id)"
+            >
+              <Icon name="trash" :size="16" />
+            </button>
+            <Icon name="chevron-right" :size="18" color="var(--c-text-4)" />
+          </div>
         </div>
       </div>
     </div>
